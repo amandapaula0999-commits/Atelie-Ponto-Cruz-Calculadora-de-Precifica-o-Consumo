@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ateliê Ponto Cruz — Calculadora de Precificação</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Fontes Google: Fraunces (serifada artesanal) e Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Ícones Lucide -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js para o gráfico de rosca -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            serif: ['"Fraunces"', 'serif'],
+          },
+          colors: {
+            linho: {
+              50: '#FDFBF7',
+              100: '#F7F2E8',
+              200: '#EFE6D5',
+              300: '#DFD0B8',
+            },
+            terracota: {
+              400: '#D97B5C',
+              500: '#C46243',
+              600: '#A84E32',
+              700: '#8A3E26',
+            },
+            salvia: {
+              100: '#EBF0EC',
+              400: '#849E8A',
+              500: '#6B8771',
+              600: '#536D59',
+            },
+            dourado: {
+              100: '#FBF4E4',
+              400: '#D4A359',
+              500: '#B8863B',
+            },
+            cacau: {
+              700: '#4A3B32',
+              800: '#382B24',
+              900: '#261D18',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #FDFBF7;
+      background-image: radial-gradient(#DFD0B8 0.75px, transparent 0.75px);
+      background-size: 20px 20px;
+      color: #382B24;
+    }
+
+    /* Estilização suave de scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #F7F2E8;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #DFD0B8;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #C46243;
+    }
+
+    /* Efeito de costura pontilhada decorativa */
+    .stitch-border {
+      border: 2px dashed #DFD0B8;
+    }
+    .stitch-border-terracota {
+      border: 2px dashed rgba(196, 98, 67, 0.35);
+    }
+
+    /* Remover setas padrão de inputs numéricos */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-terracota-500 selection:text-white">
+
+  <!-- Notificação Toast Flutuante (Substitui alert()) -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Cabeçalho do Ateliê -->
+  <header class="bg-linho-100/90 backdrop-blur-md border-b border-linho-300 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-terracota-500 text-white flex items-center justify-center shadow-md shadow-terracota-500/20">
+          <!-- Ícone SVG artesanal de bastidor / ponto cruz -->
+          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M9 9l6 6"/>
+            <path d="M15 9l-6 6"/>
+            <path d="M12 2v2"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="font-serif text-xl sm:text-2xl font-bold text-cacau-900 tracking-tight leading-none">
+            Ateliê Ponto Cruz
+          </h1>
+          <div class="flex flex-wrap items-center gap-2 mt-1">
+            <p class="text-xs sm:text-sm text-cacau-700/80">
+              Calculadora inteligente de materiais e precificação
+            </p>
+            <span id="db-status-badge" class="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+              <span id="db-status-dot" class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              <span id="db-status-text">Verificando XAMPP...</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button id="btn-toggle-params" type="button" onclick="toggleDrawer('params-drawer')"
+          class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white border border-linho-300 text-cacau-800 text-sm font-semibold hover:bg-linho-200/60 transition shadow-sm">
+          <i data-lucide="sliders-horizontal" class="w-4 h-4 text-terracota-500"></i>
+          <span>Preços dos Materiais</span>
+        </button>
+        <button id="btn-toggle-history" type="button" onclick="toggleDrawer('history-drawer')"
+          class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-salvia-500 text-white text-sm font-semibold hover:bg-salvia-600 transition shadow-sm">
+          <i data-lucide="bookmark" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">Histórico</span>
+          <span id="history-badge" class="bg-white/20 text-white text-xs px-1.5 py-0.5 rounded-full font-bold">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Gaveta / Painel Retrátil: Parâmetros de Custo dos Materiais -->
+  <section id="params-drawer" class="hidden bg-linho-100 border-b border-linho-300 shadow-inner">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <div>
+          <h2 class="font-serif text-lg font-bold text-cacau-900 flex items-center gap-2">
+            <i data-lucide="coins" class="w-5 h-5 text-dourado-500"></i>
+            Tabela de Custos dos Seus Materiais
+          </h2>
+          <p class="text-xs text-cacau-700/80">Os valores já estão configurados conforme o que você paga, mas você pode alterá-los a qualquer momento.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="savePricesToDatabase()" class="inline-flex items-center gap-1.5 text-xs font-bold bg-salvia-500 hover:bg-salvia-600 text-white px-3 py-1.5 rounded-xl transition shadow-sm">
+            <i data-lucide="save" class="w-3.5 h-3.5"></i>
+            Salvar Preços no Banco
+          </button>
+          <button type="button" onclick="resetMaterialParams()" class="text-xs font-semibold text-terracota-600 hover:text-terracota-700 underline px-2 py-1">
+            Restaurar padrões
+          </button>
+          <button type="button" onclick="toggleDrawer('params-drawer')" class="p-1.5 rounded-lg hover:bg-linho-200 text-cacau-700">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Meada -->
+        <div class="bg-white p-4 rounded-2xl border border-linho-300 shadow-sm">
+          <label class="block text-xs font-bold uppercase tracking-wider text-terracota-600 mb-1">Meada de Linha (8m / 6 fios)</label>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-semibold text-cacau-700">R$</span>
+            <input type="number" id="param-meada-price" step="0.01" min="0" value="6.00" oninput="recalculate()"
+              class="w-full px-3 py-2 rounded-xl bg-linho-50 border border-linho-300 font-bold text-cacau-900 focus:outline-none focus:border-terracota-500">
+          </div>
+          <p class="text-[11px] text-cacau-700/70 mt-1.5">Rende 8m de 6 fios (equivale a 24m usando 2 fios).</p>
+        </div>
+
+        <!-- Cola de Silicone -->
+        <div class="bg-white p-4 rounded-2xl border border-linho-300 shadow-sm">
+          <label class="block text-xs font-bold uppercase tracking-wider text-salvia-600 mb-1">Cola de Silicone (100 ml)</label>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-semibold text-cacau-700">R$</span>
+            <input type="number" id="param-cola-price" step="0.01" min="0" value="13.78" oninput="recalculate()"
+              class="w-full px-3 py-2 rounded-xl bg-linho-50 border border-linho-300 font-bold text-cacau-900 focus:outline-none focus:border-salvia-500">
+          </div>
+          <p class="text-[11px] text-cacau-700/70 mt-1.5">Frasco de 100ml (~R$ 0,14 por ml aplicado).</p>
+        </div>
+
+        <!-- Tecido Etamine -->
+        <div class="bg-white p-4 rounded-2xl border border-linho-300 shadow-sm">
+          <label class="block text-xs font-bold uppercase tracking-wider text-dourado-500 mb-1">Tecido Etamine (Metro Linear)</label>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-semibold text-cacau-700">R$</span>
+            <input type="number" id="param-etamine-price" step="0.01" min="0" value="20.00" oninput="recalculate()"
+              class="w-full px-3 py-2 rounded-xl bg-linho-50 border border-linho-300 font-bold text-cacau-900 focus:outline-none focus:border-dourado-500">
+            <div class="flex items-center gap-1 bg-linho-100 px-2.5 py-2 rounded-xl border border-linho-300" title="Largura do rolo em cm">
+              <span class="text-xs text-cacau-700">Larg:</span>
+              <input type="number" id="param-etamine-width" step="1" min="10" value="140" oninput="recalculate()"
+                class="w-12 bg-transparent font-bold text-xs text-cacau-900 text-right focus:outline-none">
+              <span class="text-xs text-cacau-700">cm</span>
+            </div>
+          </div>
+          <p class="text-[11px] text-cacau-700/70 mt-1.5">1m × 1,40m = 14.000 cm² proporcionais.</p>
+        </div>
+
+        <!-- Tecido de Acabamento -->
+        <div class="bg-white p-4 rounded-2xl border border-linho-300 shadow-sm">
+          <label class="block text-xs font-bold uppercase tracking-wider text-cacau-700 mb-1">Tecido Acabamento (Metro Linear)</label>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-semibold text-cacau-700">R$</span>
+            <input type="number" id="param-acabamento-price" step="0.01" min="0" value="14.99" oninput="recalculate()"
+              class="w-full px-3 py-2 rounded-xl bg-linho-50 border border-linho-300 font-bold text-cacau-900 focus:outline-none focus:border-terracota-500">
+            <div class="flex items-center gap-1 bg-linho-100 px-2.5 py-2 rounded-xl border border-linho-300" title="Largura do rolo em cm">
+              <span class="text-xs text-cacau-700">Larg:</span>
+              <input type="number" id="param-acabamento-width" step="1" min="10" value="140" oninput="recalculate()"
+                class="w-12 bg-transparent font-bold text-xs text-cacau-900 text-right focus:outline-none">
+              <span class="text-xs text-cacau-700">cm</span>
+            </div>
+          </div>
+          <p class="text-[11px] text-cacau-700/70 mt-1.5">Forro/verso: 1m × 1,40m = 14.000 cm².</p>
+        </div>
+
+        <!-- Pacote de Chaveiros -->
+        <div class="bg-white p-4 rounded-2xl border border-linho-300 shadow-sm">
+          <label class="block text-xs font-bold uppercase tracking-wider text-terracota-600 mb-1">Pacote de Argolas Chaveiro</label>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-semibold text-cacau-700">R$</span>
+            <input type="number" id="param-chaveiro-pack-price" step="0.01" min="0" value="13.00" oninput="recalculate()"
+              class="w-full px-3 py-2 rounded-xl bg-linho-50 border border-linho-300 font-bold text-cacau-900 focus:outline-none focus:border-terracota-500">
+            <div class="flex items-center gap-1 bg-linho-100 px-2.5 py-2 rounded-xl border border-linho-300">
+              <input type="number" id="param-chaveiro-pack-qty" step="1" min="1" value="25" oninput="recalculate()"
+                class="w-10 bg-transparent font-bold text-xs text-cacau-900 text-right focus:outline-none">
+              <span class="text-xs text-cacau-700">un</span>
+            </div>
+          </div>
+          <p class="text-[11px] text-cacau-700/70 mt-1.5">Custo real unitário: <strong id="unit-chaveiro-display">R$ 0,52</strong>/un.</p>
+        </div>
+
+        <!-- Adicional fixo por chaveiro -->
+        <div class="bg-white p-4 rounded-2xl border border-linho-300 shadow-sm">
+          <label class="block text-xs font-bold uppercase tracking-wider text-dourado-500 mb-1">Taxa Extra por Chaveiro</label>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-semibold text-cacau-700">+ R$</span>
+            <input type="number" id="param-chaveiro-extra" step="0.10" min="0" value="1.00" oninput="recalculate()"
+              class="w-full px-3 py-2 rounded-xl bg-linho-50 border border-linho-300 font-bold text-cacau-900 focus:outline-none focus:border-dourado-500">
+          </div>
+          <p class="text-[11px] text-cacau-700/70 mt-1.5">Somado automaticamente por cada chaveiro produzido.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Gaveta / Painel Retrátil: Histórico de Orçamentos Salvos -->
+  <section id="history-drawer" class="hidden bg-salvia-100 border-b border-salvia-400/40 shadow-inner">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="font-serif text-lg font-bold text-cacau-900 flex items-center gap-2">
+            <i data-lucide="archive" class="w-5 h-5 text-salvia-600"></i>
+            Peças e Orçamentos Salvos
+          </h2>
+          <p class="text-xs text-cacau-700/80">Clique em um item para carregar as medidas novamente ou excluir.</p>
+        </div>
+        <button type="button" onclick="toggleDrawer('history-drawer')" class="p-1.5 rounded-lg hover:bg-salvia-400/20 text-cacau-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div id="history-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <!-- Renderizado via JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- Conteúdo Principal -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+
+      <!-- COLUNA ESQUERDA: Dados do Bordado (7 colunas no desktop) -->
+      <div class="lg:col-span-7 space-y-6">
+
+        <!-- Card 1: Identificação e Medidas dos Tecidos -->
+        <div class="bg-white rounded-3xl p-5 sm:p-7 border border-linho-300 shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-5">
+            <div class="flex items-center gap-2.5">
+              <span class="w-8 h-8 rounded-xl bg-terracota-500/10 text-terracota-600 flex items-center justify-center font-serif font-bold text-base">1</span>
+              <h2 class="font-serif text-xl font-bold text-cacau-900">Medidas dos Tecidos</h2>
+            </div>
+            <input type="text" id="project-name" placeholder="Nome da peça (ex: Chaveiro Flor)"
+              class="w-full sm:w-64 px-3.5 py-2 text-sm rounded-xl bg-linho-50 border border-linho-300 text-cacau-900 placeholder:text-cacau-700/50 focus:outline-none focus:border-terracota-500">
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <!-- Bloco Etamine -->
+            <div class="p-4 rounded-2xl bg-linho-50 stitch-border">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-sm font-bold text-cacau-900 flex items-center gap-1.5">
+                  <i data-lucide="grid" class="w-4 h-4 text-terracota-500"></i>
+                  Tecido Etamine (Bordado)
+                </span>
+                <span id="etamine-area-badge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-terracota-500/10 text-terracota-700">
+                  49 cm²
+                </span>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-medium text-cacau-700 mb-1">Largura (cm)</label>
+                  <input type="number" id="etamine-w" step="0.5" min="1" value="7" oninput="recalculate()"
+                    class="w-full px-3 py-2.5 rounded-xl bg-white border border-linho-300 font-bold text-cacau-900 text-center focus:outline-none focus:border-terracota-500">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-cacau-700 mb-1">Altura (cm)</label>
+                  <input type="number" id="etamine-h" step="0.5" min="1" value="7" oninput="recalculate()"
+                    class="w-full px-3 py-2.5 rounded-xl bg-white border border-linho-300 font-bold text-cacau-900 text-center focus:outline-none focus:border-terracota-500">
+                </div>
+              </div>
+              <!-- Atalhos rápidos de tamanho para chaveiros/bordados -->
+              <div class="mt-3 flex flex-wrap items-center gap-1.5">
+                <span class="text-[11px] text-cacau-700/70">Atalhos:</span>
+                <button type="button" onclick="setQuickSize(6, 6)" class="text-[11px] px-2 py-0.5 rounded-md bg-white border border-linho-300 hover:border-terracota-400 text-cacau-800 transition">6×6cm</button>
+                <button type="button" onclick="setQuickSize(7, 7)" class="text-[11px] px-2 py-0.5 rounded-md bg-white border border-linho-300 hover:border-terracota-400 text-cacau-800 transition">7×7cm</button>
+                <button type="button" onclick="setQuickSize(10, 10)" class="text-[11px] px-2 py-0.5 rounded-md bg-white border border-linho-300 hover:border-terracota-400 text-cacau-800 transition">10×10cm</button>
+                <button type="button" onclick="setQuickSize(15, 15)" class="text-[11px] px-2 py-0.5 rounded-md bg-white border border-linho-300 hover:border-terracota-400 text-cacau-800 transition">15×15cm</button>
+              </div>
+            </div>
+
+            <!-- Bloco Tecido de Acabamento -->
+            <div class="p-4 rounded-2xl bg-linho-50 stitch-border">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-sm font-bold text-cacau-900 flex items-center gap-1.5">
+                  <i data-lucide="layers" class="w-4 h-4 text-salvia-600"></i>
+                  Tecido Acabamento (Forro)
+                </span>
+                <span id="acabamento-area-badge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-salvia-500/15 text-salvia-600">
+                  49 cm²
+                </span>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-medium text-cacau-700 mb-1">Largura (cm)</label>
+                  <input type="number" id="acabamento-w" step="0.5" min="0" value="7" oninput="recalculate()"
+                    class="w-full px-3 py-2.5 rounded-xl bg-white border border-linho-300 font-bold text-cacau-900 text-center focus:outline-none focus:border-salvia-500">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-cacau-700 mb-1">Altura (cm)</label>
+                  <input type="number" id="acabamento-h" step="0.5" min="0" value="7" oninput="recalculate()"
+                    class="w-full px-3 py-2.5 rounded-xl bg-white border border-linho-300 font-bold text-cacau-900 text-center focus:outline-none focus:border-salvia-500">
+                </div>
+              </div>
+              <div class="mt-3 flex items-center justify-between">
+                <button type="button" onclick="copyEtamineSize()"
+                  class="w-full inline-flex items-center justify-center gap-1.5 text-xs font-semibold py-1 px-2.5 rounded-lg bg-salvia-500/15 text-salvia-600 hover:bg-salvia-500 hover:text-white transition">
+                  <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                  Copiar tamanho do Etamine
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Detalhes do Bordado (Cores, Preenchimento e Chaveiro) -->
+        <div class="bg-white rounded-3xl p-5 sm:p-7 border border-linho-300 shadow-sm">
+          <div class="flex items-center gap-2.5 mb-5">
+            <span class="w-8 h-8 rounded-xl bg-salvia-500/15 text-salvia-600 flex items-center justify-center font-serif font-bold text-base">2</span>
+            <h2 class="font-serif text-xl font-bold text-cacau-900">Cores, Preenchimento & Chaveiro</h2>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Quantidade de Cores -->
+            <div>
+              <label class="block text-sm font-bold text-cacau-900 mb-1.5">
+                Quantas cores de linha você usou?
+              </label>
+              <p class="text-xs text-cacau-700/75 mb-3">
+                Cada cor extra inclui uma margem realista de fio para arremate no avesso.
+              </p>
+              <div class="flex items-center gap-3">
+                <button type="button" onclick="stepInput('colors-count', -1, 1)"
+                  class="w-11 h-11 rounded-xl bg-linho-100 border border-linho-300 flex items-center justify-center text-cacau-800 hover:bg-linho-200 font-bold text-lg transition">
+                  −
+                </button>
+                <div class="flex-1 relative">
+                  <input type="number" id="colors-count" min="1" max="100" value="4" oninput="recalculate()"
+                    class="w-full h-11 px-4 rounded-xl bg-linho-50 border border-linho-300 font-bold text-lg text-cacau-900 text-center focus:outline-none focus:border-terracota-500">
+                  <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-cacau-700/60 pointer-events-none">cores</span>
+                </div>
+                <button type="button" onclick="stepInput('colors-count', 1, 1)"
+                  class="w-11 h-11 rounded-xl bg-linho-100 border border-linho-300 flex items-center justify-center text-cacau-800 hover:bg-linho-200 font-bold text-lg transition">
+                  +
+                </button>
+              </div>
+            </div>
+
+            <!-- Controle de Chaveiro (Com adição automática de R$ 1,00 por unidade) -->
+            <div class="p-4 rounded-2xl bg-dourado-100/70 border border-dourado-400/40">
+              <div class="flex items-center justify-between mb-2">
+                <label class="text-sm font-bold text-cacau-900 flex items-center gap-1.5">
+                  <i data-lucide="key-round" class="w-4 h-4 text-dourado-500"></i>
+                  Quantidade de Chaveiros
+                </label>
+                <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-dourado-400/25 text-cacau-900">
+                  +R$ 1,00 / un
+                </span>
+              </div>
+              <p class="text-xs text-cacau-700/80 mb-3">
+                Soma o custo da argola (R$ 0,52) + R$ 1,00 extra automático por chaveiro. (Coloque 0 se não for chaveiro).
+              </p>
+              <div class="flex items-center gap-3">
+                <button type="button" onclick="stepInput('chaveiro-qty', -1, 0)"
+                  class="w-10 h-10 rounded-xl bg-white border border-dourado-400/40 flex items-center justify-center text-cacau-800 hover:bg-linho-100 font-bold text-lg transition">
+                  −
+                </button>
+                <input type="number" id="chaveiro-qty" min="0" max="500" value="1" oninput="recalculate()"
+                  class="flex-1 h-10 px-3 rounded-xl bg-white border border-dourado-400/40 font-bold text-base text-cacau-900 text-center focus:outline-none focus:border-dourado-500">
+                <button type="button" onclick="stepInput('chaveiro-qty', 1, 0)"
+                  class="w-10 h-10 rounded-xl bg-white border border-dourado-400/40 flex items-center justify-center text-cacau-800 hover:bg-linho-100 font-bold text-lg transition">
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Seletor Visual de Densidade / Preenchimento do Bordado -->
+          <div class="mt-6 pt-5 border-t border-linho-200">
+            <div class="flex items-center justify-between mb-3">
+              <label class="text-sm font-bold text-cacau-900">
+                Nível de Preenchimento do Bordado
+              </label>
+              <span id="density-label-hint" class="text-xs font-medium text-terracota-600">
+                ~50% da área bordada
+              </span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" id="density-selector">
+              <!-- Baixa -->
+              <button type="button" data-density="0.25" onclick="selectDensity(0.25, this)"
+                class="density-btn text-left p-3.5 rounded-2xl border-2 border-linho-300 bg-linho-50/60 hover:border-terracota-400 transition">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="font-bold text-sm text-cacau-900">Leve / Contorno</span>
+                  <span class="text-xs font-bold text-cacau-700/70">25%</span>
+                </div>
+                <p class="text-xs text-cacau-700/75">Frases curtas, iniciais ou desenhos vazados.</p>
+              </button>
+
+              <!-- Média (Padrão Ativo) -->
+              <button type="button" data-density="0.50" onclick="selectDensity(0.50, this)"
+                class="density-btn active text-left p-3.5 rounded-2xl border-2 border-terracota-500 bg-terracota-500/5 transition shadow-sm">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="font-bold text-sm text-terracota-700">Médio / Padrão</span>
+                  <span class="text-xs font-bold text-terracota-600">50%</span>
+                </div>
+                <p class="text-xs text-cacau-700/80">Desenho centralizado com fundo aparente.</p>
+              </button>
+
+              <!-- Alta -->
+              <button type="button" data-density="0.82" onclick="selectDensity(0.82, this)"
+                class="density-btn text-left p-3.5 rounded-2xl border-2 border-linho-300 bg-linho-50/60 hover:border-terracota-400 transition">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="font-bold text-sm text-cacau-900">Cheio / Intenso</span>
+                  <span class="text-xs font-bold text-cacau-700/70">82%</span>
+                </div>
+                <p class="text-xs text-cacau-700/75">Quase todo o etamine coberto de pontos.</p>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: Mão de Obra e Margem de Lucro (Opcional / Ajustável) -->
+        <div class="bg-white rounded-3xl p-5 sm:p-7 border border-linho-300 shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <div class="flex items-center gap-2.5">
+              <span class="w-8 h-8 rounded-xl bg-dourado-400/20 text-dourado-500 flex items-center justify-center font-serif font-bold text-base">3</span>
+              <div>
+                <h2 class="font-serif text-xl font-bold text-cacau-900">Seu Tempo e Margem de Lucro</h2>
+              </div>
+            </div>
+            <span class="text-xs text-cacau-700/75 bg-linho-100 px-2.5 py-1 rounded-full">Valorize seu trabalho artesanal</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-cacau-800 mb-1">Tempo Gasto (Horas)</label>
+              <div class="relative">
+                <input type="number" id="work-hours" step="0.25" min="0" value="1.5" oninput="recalculate()"
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-linho-50 border border-linho-300 font-bold text-cacau-900 focus:outline-none focus:border-terracota-500">
+                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-cacau-700/60">horas</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-cacau-800 mb-1">Valor da Sua Hora (R$)</label>
+              <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-cacau-700">R$</span>
+                <input type="number" id="hour-rate" step="1" min="0" value="12.00" oninput="recalculate()"
+                  class="w-full pl-9 pr-3 py-2.5 rounded-xl bg-linho-50 border border-linho-300 font-bold text-cacau-900 focus:outline-none focus:border-terracota-500">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-cacau-800 mb-1">Margem / Lucro (%)</label>
+              <div class="relative">
+                <input type="number" id="profit-margin" step="5" min="0" value="30" oninput="recalculate()"
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-linho-50 border border-linho-300 font-bold text-cacau-900 focus:outline-none focus:border-terracota-500">
+                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-cacau-700/60">%</span>
+              </div>
+            </div>
+          </div>
+          <p class="text-[11px] text-cacau-700/70 mt-3">
+            * Caso queira cobrar apenas com base nos materiais + taxa do chaveiro, basta zerar as horas ou o valor da hora.
+          </p>
+        </div>
+
+      </div>
+
+      <!-- COLUNA DIREITA: Estatísticas de Consumo & Precificação Final (5 colunas no desktop) -->
+      <div class="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
+
+        <!-- Card Principal de Resultado Financeiro -->
+        <div class="bg-cacau-900 text-linho-50 rounded-3xl p-6 sm:p-7 shadow-xl relative overflow-hidden">
+          <!-- Detalhe decorativo sutil -->
+          <div class="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-terracota-500/15 blur-2xl pointer-events-none"></div>
+          <div class="absolute -left-10 -bottom-10 w-40 h-40 rounded-full bg-dourado-400/10 blur-2xl pointer-events-none"></div>
+
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold uppercase tracking-widest text-dourado-400">Preço Sugerido ao Cliente</span>
+            <span id="chaveiro-badge-summary" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-terracota-500 text-white">
+              Inclui +R$ 1,00 chaveiro
+            </span>
+          </div>
+
+          <div class="flex items-baseline gap-2 my-2">
+            <span class="font-serif text-4xl sm:text-5xl font-bold text-white tracking-tight" id="final-price-display">
+              R$ 26,35
+            </span>
+          </div>
+
+          <p class="text-xs text-linho-200/80 mb-5">
+            Soma dos materiais + mão de obra + margem + <strong class="text-dourado-400" id="chaveiro-extra-text">R$ 1,00</strong> de chaveiro.
+          </p>
+
+          <!-- Sub-resumo comparativo: Custo Puro vs Mão de Obra -->
+          <div class="grid grid-cols-2 gap-3 p-3.5 rounded-2xl bg-white/5 border border-white/10 mb-5">
+            <div>
+              <span class="block text-[11px] text-linho-200/70">Custo Só Materiais</span>
+              <span class="font-serif text-lg font-bold text-linho-50" id="materials-only-cost">R$ 1,50</span>
+            </div>
+            <div class="border-l border-white/10 pl-3">
+              <span class="block text-[11px] text-linho-200/70">Materiais + Taxa Chaveiro</span>
+              <span class="font-serif text-lg font-bold text-dourado-400" id="materials-plus-chaveiro">R$ 2,50</span>
+            </div>
+          </div>
+
+          <!-- Botões de Ação -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <button type="button" onclick="copyWhatsAppSummary()"
+              class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-terracota-500 hover:bg-terracota-400 text-white font-bold text-sm transition shadow-lg shadow-terracota-500/25">
+              <i data-lucide="share-2" class="w-4 h-4"></i>
+              <span>Copiar Orçamento</span>
+            </button>
+            <button type="button" onclick="saveCurrentQuote()"
+              class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-linho-50 font-semibold text-sm transition border border-white/15">
+              <i data-lucide="bookmark-plus" class="w-4 h-4 text-dourado-400"></i>
+              <span>Salvar no Histórico</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Card de Estatísticas Detalhadas de Consumo dos Materiais -->
+        <div class="bg-white rounded-3xl p-5 sm:p-6 border border-linho-300 shadow-sm">
+          <h3 class="font-serif text-lg font-bold text-cacau-900 mb-4 flex items-center gap-2">
+            <i data-lucide="pie-chart" class="w-5 h-5 text-terracota-500"></i>
+            Estatísticas de Consumo
+          </h3>
+
+          <!-- Gráfico de Rosca + Legenda -->
+          <div class="flex flex-col sm:flex-row items-center gap-5 mb-5 pb-5 border-b border-linho-200">
+            <div class="w-36 h-36 relative flex-shrink-0">
+              <canvas id="costChart"></canvas>
+              <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span class="text-[10px] uppercase tracking-wider text-cacau-700/70 font-semibold">Materiais</span>
+                <span class="font-serif text-sm font-bold text-cacau-900" id="chart-center-total">R$ 1,50</span>
+              </div>
+            </div>
+
+            <div class="flex-1 w-full space-y-2 text-xs">
+              <div class="flex items-center justify-between">
+                <span class="flex items-center gap-2 text-cacau-800 font-medium">
+                  <span class="w-2.5 h-2.5 rounded-full bg-[#C46243]"></span> Linha (Meadas)
+                </span>
+                <span class="font-bold text-cacau-900" id="stat-line-cost">R$ 0,68</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="flex items-center gap-2 text-cacau-800 font-medium">
+                  <span class="w-2.5 h-2.5 rounded-full bg-[#6B8771]"></span> Cola Silicone
+                </span>
+                <span class="font-bold text-cacau-900" id="stat-glue-cost">R$ 0,18</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="flex items-center gap-2 text-cacau-800 font-medium">
+                  <span class="w-2.5 h-2.5 rounded-full bg-[#D4A359]"></span> Tecido Etamine
+                </span>
+                <span class="font-bold text-cacau-900" id="stat-etamine-cost">R$ 0,07</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="flex items-center gap-2 text-cacau-800 font-medium">
+                  <span class="w-2.5 h-2.5 rounded-full bg-[#8A6D5B]"></span> Tecido Acabamento
+                </span>
+                <span class="font-bold text-cacau-900" id="stat-acabamento-cost">R$ 0,05</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="flex items-center gap-2 text-cacau-800 font-medium">
+                  <span class="w-2.5 h-2.5 rounded-full bg-[#382B24]"></span> Argola Chaveiro
+                </span>
+                <span class="font-bold text-cacau-900" id="stat-chaveiro-cost">R$ 0,52</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Detalhamento Técnico (Metros de linha, ml de cola, cm² de pano) -->
+          <div class="space-y-3">
+            <!-- Estatística Linha -->
+            <div class="p-3 rounded-2xl bg-linho-50 border border-linho-200">
+              <div class="flex items-center justify-between text-xs mb-1">
+                <span class="font-bold text-terracota-700 flex items-center gap-1.5">
+                  <i data-lucide="scissors" class="w-3.5 h-3.5"></i>
+                  Estimativa de Linha Usada
+                </span>
+                <span class="font-bold text-cacau-900" id="stat-line-meters">2,70 metros</span>
+              </div>
+              <div class="w-full bg-linho-200 rounded-full h-1.5 mb-1.5 overflow-hidden">
+                <div id="bar-line-pct" class="bg-terracota-500 h-1.5 rounded-full transition-all duration-300" style="width: 11%"></div>
+              </div>
+              <p class="text-[11px] text-cacau-700/80" id="stat-line-detail">
+                Equivale a <strong>11,3%</strong> de 1 meada (considerando 2 fios + sobras de 4 cores).
+              </p>
+            </div>
+
+            <!-- Estatística Cola -->
+            <div class="p-3 rounded-2xl bg-linho-50 border border-linho-200">
+              <div class="flex items-center justify-between text-xs mb-1">
+                <span class="font-bold text-salvia-600 flex items-center gap-1.5">
+                  <i data-lucide="droplet" class="w-3.5 h-3.5"></i>
+                  Estimativa de Cola de Silicone
+                </span>
+                <span class="font-bold text-cacau-900" id="stat-glue-ml">1,30 ml</span>
+              </div>
+              <div class="w-full bg-linho-200 rounded-full h-1.5 mb-1.5 overflow-hidden">
+                <div id="bar-glue-pct" class="bg-salvia-500 h-1.5 rounded-full transition-all duration-300" style="width: 1.3%"></div>
+              </div>
+              <p class="text-[11px] text-cacau-700/80" id="stat-glue-detail">
+                Consome <strong>1,3%</strong> do frasco de 100ml para colar bordas e forro.
+              </p>
+            </div>
+
+            <!-- Estatística Tecidos -->
+            <div class="p-3 rounded-2xl bg-linho-50 border border-linho-200">
+              <div class="flex items-center justify-between text-xs mb-1">
+                <span class="font-bold text-dourado-500 flex items-center gap-1.5">
+                  <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+                  Aproveitamento dos Tecidos
+                </span>
+                <span class="font-bold text-cacau-900" id="stat-fabric-area">98 cm² totais</span>
+              </div>
+              <p class="text-[11px] text-cacau-700/80" id="stat-fabric-detail">
+                Etamine: 49 cm² (0,35% do metro) • Acabamento: 49 cm² (0,35% do metro).
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Rodapé discreto -->
+  <footer class="border-t border-linho-300 bg-linho-100/60 py-4 mt-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-cacau-700/75">
+      <p>Feito com carinho para artesãs de Ponto Cruz.</p>
+      <p>Os cálculos de linha e cola são estimativas técnicas baseadas na área e número de cores.</p>
+    </div>
+  </footer>
+
+  <!-- Área invisível auxiliar para cópia segura via execCommand -->
+  <textarea id="clipboard-helper" class="sr-only" aria-hidden="true"></textarea>
+
+  <script>
+    // Inicialização de estado
+    let currentDensity = 0.50;
+    let costChartInstance = null;
+    let savedQuotes = [];
+    let isMysqlConnected = false;
+
+    // Atualiza o indicador visual de conexão com o XAMPP/MySQL
+    function setDatabaseStatus(connected) {
+      isMysqlConnected = connected;
+      const badge = document.getElementById('db-status-badge');
+      const dot = document.getElementById('db-status-dot');
+      const text = document.getElementById('db-status-text');
+
+      if (connected) {
+        badge.className = 'inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300';
+        dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500';
+        text.textContent = 'Conectado ao MySQL (XAMPP)';
+      } else {
+        badge.className = 'inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300';
+        dot.className = 'w-1.5 h-1.5 rounded-full bg-amber-500';
+        text.textContent = 'Modo Offline (LocalStorage)';
+      }
+    }
+
+    // Formata valores para Real Brasileiro
+    function formatBRL(value) {
+      return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    // Exibe notificação Toast suave (substitui alert)
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const bgClass = type === 'success' ? 'bg-cacau-900 text-linho-50 border-dourado-400/40' : 'bg-terracota-600 text-white border-white/20';
+
+      toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-xl border text-sm font-medium transform transition-all duration-300 translate-y-2 opacity-0 ${bgClass}`;
+      toast.innerHTML = `
+        <span class="w-2 h-2 rounded-full ${type === 'success' ? 'bg-dourado-400' : 'bg-white'}"></span>
+        <span>${message}</span>
+      `;
+      container.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('translate-y-2', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    // Abre/fecha painéis superiores (Parâmetros ou Histórico)
+    function toggleDrawer(drawerId) {
+      const target = document.getElementById(drawerId);
+      const otherId = drawerId === 'params-drawer' ? 'history-drawer' : 'params-drawer';
+      document.getElementById(otherId).classList.add('hidden');
+      target.classList.toggle('hidden');
+    }
+
+    // Incrementa ou decrementa inputs numéricos com botões + e -
+    function stepInput(inputId, delta, minVal = 0) {
+      const el = document.getElementById(inputId);
+      const current = parseFloat(el.value) || 0;
+      const next = Math.max(minVal, current + delta);
+      el.value = next;
+      recalculate();
+    }
+
+    // Atalhos de medidas rápidas
+    function setQuickSize(w, h) {
+      document.getElementById('etamine-w').value = w;
+      document.getElementById('etamine-h').value = h;
+      document.getElementById('acabamento-w').value = w;
+      document.getElementById('acabamento-h').value = h;
+      recalculate();
+      showToast(`Medidas ajustadas para ${w}×${h} cm`);
+    }
+
+    // Copia tamanho do etamine para o tecido de acabamento
+    function copyEtamineSize() {
+      document.getElementById('acabamento-w').value = document.getElementById('etamine-w').value;
+      document.getElementById('acabamento-h').value = document.getElementById('etamine-h').value;
+      recalculate();
+      showToast('Tamanho do Etamine copiado para o Acabamento!');
+    }
+
+    // Seleciona nível de preenchimento do bordado
+    function selectDensity(val, btnElement) {
+      currentDensity = val;
+      document.querySelectorAll('.density-btn').forEach(btn => {
+        btn.classList.remove('active', 'border-terracota-500', 'bg-terracota-500/5', 'shadow-sm');
+        btn.classList.add('border-linho-300', 'bg-linho-50/60');
+        btn.querySelector('span:first-child').classList.remove('text-terracota-700');
+        btn.querySelector('span:first-child').classList.add('text-cacau-900');
+      });
+
+      btnElement.classList.remove('border-linho-300', 'bg-linho-50/60');
+      btnElement.classList.add('active', 'border-terracota-500', 'bg-terracota-500/5', 'shadow-sm');
+      btnElement.querySelector('span:first-child').classList.remove('text-cacau-900');
+      btnElement.querySelector('span:first-child').classList.add('text-terracota-700');
+
+      const pct = Math.round(val * 100);
+      document.getElementById('density-label-hint').textContent = `~${pct}% da área bordada`;
+      recalculate();
+    }
+
+    // Restaura parâmetros padrão solicitados pelo usuário
+    function resetMaterialParams() {
+      document.getElementById('param-meada-price').value = '6.00';
+      document.getElementById('param-cola-price').value = '13.78';
+      document.getElementById('param-etamine-price').value = '20.00';
+      document.getElementById('param-etamine-width').value = '140';
+      document.getElementById('param-acabamento-price').value = '14.99';
+      document.getElementById('param-acabamento-width').value = '140';
+      document.getElementById('param-chaveiro-pack-price').value = '13.00';
+      document.getElementById('param-chaveiro-pack-qty').value = '25';
+      document.getElementById('param-chaveiro-extra').value = '1.00';
+      recalculate();
+      savePricesToDatabase(true);
+      showToast('Preços padrão restaurados!');
+    }
+
+    // Salva a tabela de preços dos materiais no MySQL (via api.php) e no localStorage
+    async function savePricesToDatabase(silent = false) {
+      const precosPayload = {
+        preco_meada: parseFloat(document.getElementById('param-meada-price').value) || 6.00,
+        preco_cola: parseFloat(document.getElementById('param-cola-price').value) || 13.78,
+        preco_etamine: parseFloat(document.getElementById('param-etamine-price').value) || 20.00,
+        preco_acabamento: parseFloat(document.getElementById('param-acabamento-price').value) || 14.99,
+        preco_pacote_chaveiro: parseFloat(document.getElementById('param-chaveiro-pack-price').value) || 13.00
+      };
+
+      localStorage.setItem('atelie_pontocruz_precos', JSON.stringify(precosPayload));
+
+      try {
+        const res = await fetch('api.php?acao=salvar_precos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(precosPayload)
+        });
+        if (!res.ok) throw new Error('Falha HTTP');
+        setDatabaseStatus(true);
+        if (!silent) showToast('Preços salvos no banco de dados MySQL!');
+      } catch (e) {
+        setDatabaseStatus(false);
+        if (!silent) showToast('Preços salvos localmente (XAMPP offline).');
+      }
+    }
+
+    // Carrega orçamentos e preços do MySQL (api.php) com fallback automático para localStorage
+    async function loadFromDatabase() {
+      try {
+        const res = await fetch('api.php?acao=listar');
+        if (!res.ok) throw new Error('API indisponível');
+        const data = await res.json();
+
+        if (data.precos) {
+          document.getElementById('param-meada-price').value = parseFloat(data.precos.preco_meada).toFixed(2);
+          document.getElementById('param-cola-price').value = parseFloat(data.precos.preco_cola).toFixed(2);
+          document.getElementById('param-etamine-price').value = parseFloat(data.precos.preco_etamine).toFixed(2);
+          document.getElementById('param-acabamento-price').value = parseFloat(data.precos.preco_acabamento).toFixed(2);
+          document.getElementById('param-chaveiro-pack-price').value = parseFloat(data.precos.preco_pacote_chaveiro).toFixed(2);
+        }
+
+        if (Array.isArray(data.orcamentos)) {
+          savedQuotes = data.orcamentos.map(row => ({
+            id: Number(row.id),
+            date: row.criado_em ? new Date(row.criado_em.replace(' ', 'T')).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR'),
+            projectName: row.nome_peca,
+            ew: parseFloat(row.etamine_largura),
+            eh: parseFloat(row.etamine_altura),
+            aw: parseFloat(row.acabamento_largura),
+            ah: parseFloat(row.acabamento_altura),
+            colorsCount: parseInt(row.qtd_cores),
+            chaveiroQty: parseInt(row.qtd_chaveiros),
+            totalLineMetersUsed: parseFloat(row.metros_linha),
+            glueMlUsed: parseFloat(row.ml_cola),
+            pureMaterialsCost: parseFloat(row.custo_materiais),
+            finalSuggestedPrice: parseFloat(row.preco_final),
+            density: 0.50,
+            workHours: 1.5,
+            hourRate: 12.00,
+            profitMargin: 30
+          }));
+        }
+
+        setDatabaseStatus(true);
+      } catch (err) {
+        setDatabaseStatus(false);
+        try {
+          const storedPrices = localStorage.getItem('atelie_pontocruz_precos');
+          if (storedPrices) {
+            const p = JSON.parse(storedPrices);
+            document.getElementById('param-meada-price').value = parseFloat(p.preco_meada).toFixed(2);
+            document.getElementById('param-cola-price').value = parseFloat(p.preco_cola).toFixed(2);
+            document.getElementById('param-etamine-price').value = parseFloat(p.preco_etamine).toFixed(2);
+            document.getElementById('param-acabamento-price').value = parseFloat(p.preco_acabamento).toFixed(2);
+            document.getElementById('param-chaveiro-pack-price').value = parseFloat(p.preco_pacote_chaveiro).toFixed(2);
+          }
+
+          const storedQuotes = localStorage.getItem('atelie_pontocruz_quotes');
+          if (storedQuotes) savedQuotes = JSON.parse(storedQuotes);
+        } catch (e) {
+          savedQuotes = [];
+        }
+      }
+
+      renderHistory();
+      recalculate();
+    }
+
+    // Função principal de cálculo em tempo real
+    function recalculate() {
+      // 1. Leitura dos parâmetros base de preço
+      const meadaPrice = Math.max(0, parseFloat(document.getElementById('param-meada-price').value) || 0);
+      const colaPrice100ml = Math.max(0, parseFloat(document.getElementById('param-cola-price').value) || 0);
+      const etaminePriceMeter = Math.max(0, parseFloat(document.getElementById('param-etamine-price').value) || 0);
+      const etamineRollWidth = Math.max(1, parseFloat(document.getElementById('param-etamine-width').value) || 140);
+      const acabamentoPriceMeter = Math.max(0, parseFloat(document.getElementById('param-acabamento-price').value) || 0);
+      const acabamentoRollWidth = Math.max(1, parseFloat(document.getElementById('param-acabamento-width').value) || 140);
+      const chaveiroPackPrice = Math.max(0, parseFloat(document.getElementById('param-chaveiro-pack-price').value) || 0);
+      const chaveiroPackQty = Math.max(1, parseFloat(document.getElementById('param-chaveiro-pack-qty').value) || 25);
+      const chaveiroExtraFee = Math.max(0, parseFloat(document.getElementById('param-chaveiro-extra').value) || 0);
+
+      // Custo unitário real da argola de chaveiro
+      const unitChaveiroCost = chaveiroPackPrice / chaveiroPackQty;
+      document.getElementById('unit-chaveiro-display').textContent = formatBRL(unitChaveiroCost);
+
+      // 2. Leitura das entradas do bordado atual
+      const ew = Math.max(0, parseFloat(document.getElementById('etamine-w').value) || 0);
+      const eh = Math.max(0, parseFloat(document.getElementById('etamine-h').value) || 0);
+      const aw = Math.max(0, parseFloat(document.getElementById('acabamento-w').value) || 0);
+      const ah = Math.max(0, parseFloat(document.getElementById('acabamento-h').value) || 0);
+      const colorsCount = Math.max(1, parseInt(document.getElementById('colors-count').value) || 1);
+      const chaveiroQty = Math.max(0, parseInt(document.getElementById('chaveiro-qty').value) || 0);
+
+      const workHours = Math.max(0, parseFloat(document.getElementById('work-hours').value) || 0);
+      const hourRate = Math.max(0, parseFloat(document.getElementById('hour-rate').value) || 0);
+      const profitMargin = Math.max(0, parseFloat(document.getElementById('profit-margin').value) || 0);
+
+      // 3. Cálculo das Áreas de Tecido (cm²)
+      const etamineArea = ew * eh;
+      const acabamentoArea = aw * ah;
+      const totalFabricArea = etamineArea + acabamentoArea;
+
+      document.getElementById('etamine-area-badge').textContent = `${etamineArea.toFixed(1).replace('.0', '')} cm²`;
+      document.getElementById('acabamento-area-badge').textContent = `${acabamentoArea.toFixed(1).replace('.0', '')} cm²`;
+
+      // Área total de 1 metro linear (100cm x largura do rolo)
+      const etamineMeterArea = 100 * etamineRollWidth;
+      const acabamentoMeterArea = 100 * acabamentoRollWidth;
+
+      const etamineCost = (etamineArea / etamineMeterArea) * etaminePriceMeter;
+      const acabamentoCost = (acabamentoArea / acabamentoMeterArea) * acabamentoPriceMeter;
+
+      const etaminePctMeter = (etamineArea / etamineMeterArea) * 100;
+      const acabamentoPctMeter = (acabamentoArea / acabamentoMeterArea) * 100;
+
+      // 4. Estimativa de Linha (Meadas)
+      // Uma meada padrão tem 8 metros com 6 cabos (fios). No ponto cruz usa-se normalmente 2 fios = 24 metros úteis por meada.
+      // Em etamine padrão (~5.5 pontos/cm), 1 cm² cheio tem ~30 pontos cruz, gastando ~0.075m de linha (2 fios) por cm² preenchido.
+      // Além disso, cada cor diferente usada gera ~0.22m de fio de início/arremate/troca de agulha.
+      const usefulMetersPerMeada = 24.0;
+      const stitchLineMeters = etamineArea * currentDensity * 0.075;
+      const colorWasteMeters = colorsCount * 0.22;
+      const totalLineMetersUsed = etamineArea > 0 ? (stitchLineMeters + colorWasteMeters) : 0;
+
+      const meadaFractionUsed = totalLineMetersUsed / usefulMetersPerMeada;
+      const lineCost = meadaFractionUsed * meadaPrice;
+
+      // 5. Estimativa de Cola de Silicone (ml)
+      // Usada para selar as bordas do etamine (evitar desfiar) e colar o tecido de acabamento no verso.
+      // Estimativa: ~0.014 ml por cm² de acabamento + ~0.022 ml por cm de perímetro colado.
+      const perimeter = acabamentoArea > 0 ? 2 * (aw + ah) : 2 * (ew + eh);
+      const glueMlUsed = totalFabricArea > 0 ? (acabamentoArea * 0.014) + (perimeter * 0.022) : 0;
+      const glueCost = (glueMlUsed / 100) * colaPrice100ml;
+
+      // 6. Custo da Argola de Chaveiro + Adicional Automático de R$ 1,00 por chaveiro
+      const chaveiroHardwareCost = chaveiroQty * unitChaveiroCost;
+      const chaveiroExtraTotal = chaveiroQty * chaveiroExtraFee;
+
+      // 7. Totais Financeiros
+      const pureMaterialsCost = lineCost + glueCost + etamineCost + acabamentoCost + chaveiroHardwareCost;
+      const materialsWithChaveiroExtra = pureMaterialsCost + chaveiroExtraTotal;
+
+      const laborCost = workHours * hourRate;
+      const subtotalBeforeMargin = pureMaterialsCost + laborCost;
+      const priceWithMargin = subtotalBeforeMargin * (1 + profitMargin / 100);
+
+      // Soma o adicional automático de R$ 1,00 por chaveiro ao valor final sugerido
+      const finalSuggestedPrice = priceWithMargin + chaveiroExtraTotal;
+
+      // 8. Atualização da Interface (DOM)
+      document.getElementById('final-price-display').textContent = formatBRL(finalSuggestedPrice);
+      document.getElementById('materials-only-cost').textContent = formatBRL(pureMaterialsCost);
+      document.getElementById('materials-plus-chaveiro').textContent = formatBRL(materialsWithChaveiroExtra);
+      document.getElementById('chart-center-total').textContent = formatBRL(pureMaterialsCost);
+
+      const badgeSummary = document.getElementById('chaveiro-badge-summary');
+      const extraText = document.getElementById('chaveiro-extra-text');
+      if (chaveiroQty > 0) {
+        badgeSummary.classList.remove('hidden');
+        badgeSummary.textContent = chaveiroQty === 1
+          ? `Inclui +${formatBRL(chaveiroExtraTotal)} (1 chaveiro)`
+          : `Inclui +${formatBRL(chaveiroExtraTotal)} (${chaveiroQty} chaveiros)`;
+        extraText.textContent = formatBRL(chaveiroExtraTotal);
+      } else {
+        badgeSummary.classList.add('hidden');
+        extraText.textContent = 'R$ 0,00';
+      }
+
+      // Custos individuais
+      document.getElementById('stat-line-cost').textContent = formatBRL(lineCost);
+      document.getElementById('stat-glue-cost').textContent = formatBRL(glueCost);
+      document.getElementById('stat-etamine-cost').textContent = formatBRL(etamineCost);
+      document.getElementById('stat-acabamento-cost').textContent = formatBRL(acabamentoCost);
+      document.getElementById('stat-chaveiro-cost').textContent = formatBRL(chaveiroHardwareCost);
+
+      // Barras e detalhes técnicos
+      document.getElementById('stat-line-meters').textContent = `${totalLineMetersUsed.toFixed(2).replace('.', ',')} metros`;
+      const meadaPct = Math.min(100, meadaFractionUsed * 100);
+      document.getElementById('bar-line-pct').style.width = `${Math.max(2, meadaPct)}%`;
+      document.getElementById('stat-line-detail').innerHTML =
+        `Equivale a <strong>${(meadaFractionUsed * 100).toFixed(1).replace('.', ',')}%</strong> de 1 meada (2 fios + sobras de ${colorsCount} ${colorsCount === 1 ? 'cor' : 'cores'}).`;
+
+      document.getElementById('stat-glue-ml').textContent = `${glueMlUsed.toFixed(2).replace('.', ',')} ml`;
+      const gluePct = Math.min(100, (glueMlUsed / 100) * 100);
+      document.getElementById('bar-glue-pct').style.width = `${Math.max(2, gluePct)}%`;
+      document.getElementById('stat-glue-detail').innerHTML =
+        `Consome <strong>${gluePct.toFixed(2).replace('.', ',')}%</strong> do frasco de 100ml para colar bordas e acabamento.`;
+
+      document.getElementById('stat-fabric-area').textContent = `${totalFabricArea.toFixed(0)} cm² totais`;
+      document.getElementById('stat-fabric-detail').textContent =
+        `Etamine: ${etamineArea.toFixed(0)} cm² (${etaminePctMeter.toFixed(2).replace('.', ',')}% do metro) • Acabamento: ${acabamentoArea.toFixed(0)} cm² (${acabamentoPctMeter.toFixed(2).replace('.', ',')}% do metro).`;
+
+      // Guarda estado atual para salvamento e compartilhamento
+      window.lastCalculation = {
+        projectName: document.getElementById('project-name').value.trim() || 'Bordado Ponto Cruz',
+        ew, eh, aw, ah,
+        colorsCount,
+        chaveiroQty,
+        density: currentDensity,
+        workHours,
+        hourRate,
+        profitMargin,
+        totalLineMetersUsed,
+        glueMlUsed,
+        pureMaterialsCost,
+        chaveiroExtraTotal,
+        finalSuggestedPrice
+      };
+
+      updateChart([lineCost, glueCost, etamineCost, acabamentoCost, chaveiroHardwareCost]);
+    }
+
+    // Atualiza ou inicializa o gráfico de rosca Chart.js
+    function updateChart(dataValues) {
+      const ctx = document.getElementById('costChart').getContext('2d');
+      const total = dataValues.reduce((a, b) => a + b, 0);
+      const safeData = total > 0 ? dataValues : [1, 0, 0, 0, 0];
+
+      if (costChartInstance) {
+        costChartInstance.data.datasets[0].data = safeData;
+        costChartInstance.update('none');
+        return;
+      }
+
+      costChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Linha', 'Cola Silicone', 'Etamine', 'Acabamento', 'Argola Chaveiro'],
+          datasets: [{
+            data: safeData,
+            backgroundColor: ['#C46243', '#6B8771', '#D4A359', '#8A6D5B', '#382B24'],
+            borderWidth: 2,
+            borderColor: '#FFFFFF',
+            hoverOffset: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          cutout: '68%',
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return ` ${context.label}: ${formatBRL(context.raw)}`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Copia resumo formatado para WhatsApp usando execCommand('copy')
+    function copyWhatsAppSummary() {
+      const c = window.lastCalculation;
+      if (!c) return;
+
+      const text = [
+        `🧵 *Orçamento — ${c.projectName}*`,
+        `📏 Tamanho: ${c.ew}×${c.eh} cm (${c.colorsCount} ${c.colorsCount === 1 ? 'cor' : 'cores'})`,
+        c.chaveiroQty > 0 ? `🔑 Acabamento: Chaveiro (${c.chaveiroQty} un)` : `✨ Acabamento artesanal com forro`,
+        `💰 *Valor da peça: ${formatBRL(c.finalSuggestedPrice)}*`,
+        ``,
+        `📊 _Resumo interno de materiais:_`,
+        `• Linha estimada: ${c.totalLineMetersUsed.toFixed(2).replace('.', ',')}m`,
+        `• Cola silicone: ${c.glueMlUsed.toFixed(2).replace('.', ',')}ml`,
+        `• Custo materiais: ${formatBRL(c.pureMaterialsCost)}`
+      ].join('\n');
+
+      const helper = document.getElementById('clipboard-helper');
+      helper.value = text;
+      helper.classList.remove('sr-only');
+      helper.select();
+      helper.setSelectionRange(0, 99999);
+
+      try {
+        document.execCommand('copy');
+        showToast('Resumo copiado! Cole direto no WhatsApp.');
+      } catch (err) {
+        showToast('Não foi possível copiar automaticamente.', 'error');
+      }
+
+      helper.classList.add('sr-only');
+    }
+
+    // Salva orçamento no MySQL (api.php) e mantém cópia no localStorage
+    async function saveCurrentQuote() {
+      const c = window.lastCalculation;
+      if (!c) return;
+
+      const payloadBanco = {
+        nome_peca: c.projectName,
+        etamine_largura: c.ew,
+        etamine_altura: c.eh,
+        acabamento_largura: c.aw,
+        acabamento_altura: c.ah,
+        qtd_cores: c.colorsCount,
+        qtd_chaveiros: c.chaveiroQty,
+        metros_linha: Number(c.totalLineMetersUsed.toFixed(2)),
+        ml_cola: Number(c.glueMlUsed.toFixed(2)),
+        custo_materiais: Number(c.pureMaterialsCost.toFixed(2)),
+        preco_final: Number(c.finalSuggestedPrice.toFixed(2))
+      };
+
+      try {
+        const res = await fetch('api.php?acao=salvar_orcamento', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payloadBanco)
+        });
+        if (!res.ok) throw new Error('Falha ao salvar no MySQL');
+        setDatabaseStatus(true);
+        await loadFromDatabase();
+        showToast('Orçamento salvo no banco de dados MySQL!');
+      } catch (e) {
+        setDatabaseStatus(false);
+        const item = {
+          id: Date.now(),
+          date: new Date().toLocaleDateString('pt-BR'),
+          ...c
+        };
+        savedQuotes.unshift(item);
+        if (savedQuotes.length > 30) savedQuotes.pop();
+        localStorage.setItem('atelie_pontocruz_quotes', JSON.stringify(savedQuotes));
+        renderHistory();
+        showToast('Salvo no histórico local (XAMPP offline).');
+      }
+    }
+
+    // Carrega orçamento salvo de volta para os campos
+    function loadQuote(id) {
+      const item = savedQuotes.find(q => q.id === id);
+      if (!item) return;
+
+      document.getElementById('project-name').value = item.projectName;
+      document.getElementById('etamine-w').value = item.ew;
+      document.getElementById('etamine-h').value = item.eh;
+      document.getElementById('acabamento-w').value = item.aw;
+      document.getElementById('acabamento-h').value = item.ah;
+      document.getElementById('colors-count').value = item.colorsCount;
+      document.getElementById('chaveiro-qty').value = item.chaveiroQty;
+      document.getElementById('work-hours').value = item.workHours || 1.5;
+      document.getElementById('hour-rate').value = item.hourRate || 12.00;
+      document.getElementById('profit-margin').value = item.profitMargin || 30;
+
+      const btn = document.querySelector(`.density-btn[data-density="${item.density || 0.50}"]`);
+      if (btn) selectDensity(item.density || 0.50, btn);
+
+      recalculate();
+      toggleDrawer('history-drawer');
+      showToast(`"${item.projectName}" carregado!`);
+    }
+
+    // Exclui item do histórico no MySQL (api.php) e no localStorage
+    async function deleteQuote(id, event) {
+      event.stopPropagation();
+
+      try {
+        const res = await fetch(`api.php?acao=excluir&id=${id}`);
+        if (!res.ok) throw new Error('Falha ao excluir no MySQL');
+        setDatabaseStatus(true);
+        await loadFromDatabase();
+        showToast('Orçamento excluído do banco MySQL.');
+      } catch (e) {
+        setDatabaseStatus(false);
+        savedQuotes = savedQuotes.filter(q => q.id !== id);
+        localStorage.setItem('atelie_pontocruz_quotes', JSON.stringify(savedQuotes));
+        renderHistory();
+        showToast('Item removido do histórico local.');
+      }
+    }
+
+    // Renderiza lista do histórico
+    function renderHistory() {
+      const container = document.getElementById('history-list');
+      const badge = document.getElementById('history-badge');
+      badge.textContent = savedQuotes.length;
+
+      if (savedQuotes.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full text-center py-6 bg-white/60 rounded-2xl border border-dashed border-salvia-400">
+            <p class="text-sm font-medium text-cacau-800">Nenhum orçamento salvo ainda.</p>
+            <p class="text-xs text-cacau-700/70 mt-1">Clique em "Salvar no Histórico" no card principal para guardar suas peças.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = savedQuotes.map(item => `
+        <div onclick="loadQuote(${item.id})"
+          class="cursor-pointer bg-white p-4 rounded-2xl border border-salvia-400/40 hover:border-terracota-500 transition shadow-sm flex items-start justify-between gap-3 group">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-sm text-cacau-900 group-hover:text-terracota-600 transition">${item.projectName}</span>
+              <span class="text-[10px] text-cacau-700/60">${item.date}</span>
+            </div>
+            <p class="text-xs text-cacau-700/80 mt-1">
+              ${item.ew}×${item.eh}cm • ${item.colorsCount} cores ${item.chaveiroQty > 0 ? `• ${item.chaveiroQty} chaveiro(s)` : ''}
+            </p>
+            <div class="mt-2 flex items-center gap-3 text-xs">
+              <span class="font-bold text-terracota-600">${formatBRL(item.finalSuggestedPrice)}</span>
+              <span class="text-cacau-700/60">Materiais: ${formatBRL(item.pureMaterialsCost)}</span>
+            </div>
+          </div>
+          <button type="button" onclick="deleteQuote(${item.id}, event)" title="Excluir"
+            class="p-1.5 rounded-lg text-cacau-700/50 hover:text-red-600 hover:bg-red-50 transition">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          </button>
+        </div>
+      `).join('');
+
+      lucide.createIcons();
+    }
+
+    // Inicialização ao carregar a página
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      loadFromDatabase();
+    });
+  </script>
+</body>
+</html>
