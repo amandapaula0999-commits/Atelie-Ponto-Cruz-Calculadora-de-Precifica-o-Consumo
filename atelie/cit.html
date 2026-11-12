@@ -299,7 +299,7 @@
               <span class="w-8 h-8 rounded-xl bg-terracota-500/10 text-terracota-600 flex items-center justify-center font-serif font-bold text-base">1</span>
               <h2 class="font-serif text-xl font-bold text-cacau-900">Medidas dos Tecidos</h2>
             </div>
-            <input type="text" id="project-name" placeholder="Nome da peça (ex: Chaveiro Flor)"
+            <input type="text" id="project-name" oninput="recalculate()" placeholder="Nome da peça (ex: Chaveiro Flor)"
               class="w-full sm:w-64 px-3.5 py-2 text-sm rounded-xl bg-linho-50 border border-linho-300 text-cacau-900 placeholder:text-cacau-700/50 focus:outline-none focus:border-terracota-500">
           </div>
 
@@ -1097,11 +1097,14 @@
 
     // Copia resumo formatado para WhatsApp usando execCommand('copy')
     function copyWhatsAppSummary() {
+      recalculate();
       const c = window.lastCalculation;
       if (!c) return;
 
+      const currentName = document.getElementById('project-name').value.trim() || c.projectName || 'Bordado Ponto Cruz';
+
       const text = [
-        `🧵 *Orçamento — ${c.projectName}*`,
+        `🧵 *Orçamento — ${currentName}*`,
         `📏 Tamanho: ${c.ew}×${c.eh} cm (${c.colorsCount} ${c.colorsCount === 1 ? 'cor' : 'cores'})`,
         c.chaveiroQty > 0 ? `🔑 Acabamento: Chaveiro (${c.chaveiroQty} un)` : `✨ Acabamento artesanal com forro`,
         `💰 *Valor da peça: ${formatBRL(c.finalSuggestedPrice)}*`,
@@ -1130,11 +1133,15 @@
 
     // Salva orçamento no MySQL (api.php) e mantém cópia no localStorage
     async function saveCurrentQuote() {
+      recalculate();
       const c = window.lastCalculation;
       if (!c) return;
 
+      const currentName = document.getElementById('project-name').value.trim() || 'Bordado Ponto Cruz';
+      c.projectName = currentName;
+
       const payloadBanco = {
-        nome_peca: c.projectName,
+        nome_peca: currentName,
         etamine_largura: c.ew,
         etamine_altura: c.eh,
         acabamento_largura: c.aw,
@@ -1162,7 +1169,8 @@
         const item = {
           id: Date.now(),
           date: new Date().toLocaleDateString('pt-BR'),
-          ...c
+          ...c,
+          projectName: currentName
         };
         savedQuotes.unshift(item);
         if (savedQuotes.length > 30) savedQuotes.pop();
