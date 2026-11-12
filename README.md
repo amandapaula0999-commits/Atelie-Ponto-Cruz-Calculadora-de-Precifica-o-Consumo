@@ -1,9 +1,9 @@
-🧵 Ateliê Ponto Cruz — Calculadora de Precificação & Consumo
+ Ateliê Ponto Cruz — Calculadora de Precificação & Consumo
 Uma aplicação web artesanal e inteligente criada para ajudar artesãos de Ponto Cruz a calcular exatamente quanto cobrar por cada peça ou chaveiro, estimando automaticamente o consumo de linha (meadas), cola de silicone, tecido étamine e tecido de acabamento.
 
 🤖 Nota / Adendo: Esse projeto foi feito com a ajuda de IA.
 
-🚀 COMO FAZER FUNCIONAR (PASSO A PASSO RÁPIDO)
+ COMO FAZER FUNCIONAR (PASSO A PASSO RÁPIDO)
 Você pode rodar este projeto de duas maneiras no seu computador:
 
  Opção 1: Modo Completo com Banco de Dados (Recomendado — Usando XAMPP)
@@ -75,13 +75,13 @@ Se você não quiser instalar o XAMPP ou quiser testar imediatamente:
 📁 Estrutura do Projeto
 
 atelie/
-├── 📄 cit.html          # Interface completa, estilos (Tailwind CSS), gráficos (Chart.js) e lógica de cálculo
-├── 🐘 api.php           # API em PHP para conectar o front-end ao banco de dados MySQL
-├── 📖 README.md         # Este manual de instruções
-└── 🗄️ crieUmSQL.SQL     # Este é o código do SQL com o que está acima
+├──  cit.html          # Interface completa, estilos (Tailwind CSS), gráficos (Chart.js) e lógica de cálculo
+├──  api.php           # API em PHP para conectar o front-end ao banco de dados MySQL
+├──  README.md         # Este manual de instruções
+└──  crieUmSQL.SQL     # Este é o código do SQL com o que está acima
 
 
-🧠 Como o Sistema Funciona por Dentro
+ Como o Sistema Funciona por Dentro
 
 1.  Tabela de Custos Configurável
 
@@ -103,15 +103,11 @@ A partir das medidas em centímetros (Largura x Altura) do Etamine e do Tecido d
 3.  Regra Automática para Chaveiros
 
 Sempre que o campo Quantidade de Chaveiros for maior que zero:
+---O sistema inclui o custo unitário da argola metálica nos materiais.
+---Acrescenta automaticamente +R$ 1,00 por chaveiro diretamente no valor final sugerido ao cliente.
 
- O sistema inclui o custo unitário da argola metálica nos materiais.
+4.  Recursos Extras
 
-➕ Acrescenta automaticamente +R$ 1,00 por chaveiro diretamente no valor final sugerido ao cliente.
-
-4. ✨ Recursos Extras
-
-🍩 Gráfico de Divisão de Custos: Visualização em tempo real do peso de cada material no custo total.
-
-📱 Copiar Orçamento: Gera um resumo formatado pronto para colar e enviar no WhatsApp do cliente.
-
-🔖 Histórico Salvo: Permite guardar peças prontas e recarregar suas medidas com um clique quando precisar fazer uma encomenda parecida.
+ ---Gráfico de Divisão de Custos: Visualização em tempo real do peso de cada material no custo total.
+--- Copiar Orçamento: Gera um resumo formatado pronto para colar e enviar no WhatsApp do cliente.
+--- Histórico Salvo: Permite guardar peças prontas e recarregar suas medidas com um clique quando precisar fazer uma encomenda parecida.
