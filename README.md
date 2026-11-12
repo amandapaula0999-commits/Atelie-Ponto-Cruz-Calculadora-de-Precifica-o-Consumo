@@ -111,3 +111,6 @@ Sempre que o campo Quantidade de Chaveiros for maior que zero:
  ---Gráfico de Divisão de Custos: Visualização em tempo real do peso de cada material no custo total.
 --- Copiar Orçamento: Gera um resumo formatado pronto para colar e enviar no WhatsApp do cliente.
 --- Histórico Salvo: Permite guardar peças prontas e recarregar suas medidas com um clique quando precisar fazer uma encomenda parecida.
+
+<img width="840" height="750" alt="image" src="https://github.com/user-attachments/assets/c6b5a958-394a-4a56-85b8-c05a3e7f9728" />
+
